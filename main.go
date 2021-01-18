@@ -4,53 +4,47 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sort"
 )
-
-//User type
-type User struct {
-	Name     string     `json:"name"`
-	Projects []*Project `json:"projects"`
-}
 
 //Project type
 type Project struct {
-	Name    string    `json:"name"`
-	Columns []*Column `json:"columns"`
+	ID          int       `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Columns     []*Column `json:"columns"`
 }
 
 //Column type
 type Column struct {
+	ID    int     `json:"id"`
 	Name  string  `json:"name"`
 	Tasks []*Task `json:"tasks"`
 }
 
 //Task type
 type Task struct {
-	Name       string     `json:"name"`
-	Comments   []*Comment `json:"comments"`
-	HostColumn *Column    `json:"-"`
+	ID          int        `json:"id"`
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Priority    float64    `json:"-"`
+	Comments    []*Comment `json:"comments"`
+	HostColumn  *Column    `json:"-"`
 }
 
 //Comment type
 type Comment struct {
+	ID   int    `json:"id"`
 	Text string `json:"text"`
 }
 
-//NewUser func
-func NewUser(name string) *User {
-
-	return &User{
-		Name:     name,
-		Projects: []*Project{NewProject("defaultProjectName")},
-	}
-}
-
 //NewProject func
-func NewProject(name string) *Project {
+func NewProject(name, descr string) *Project {
 
 	return &Project{
-		Name:    name,
-		Columns: []*Column{NewColumn("defaultColumnName")},
+		Name:        name,
+		Description: descr,
+		Columns:     []*Column{NewColumn("defaultColumnName")},
 	}
 }
 
@@ -64,12 +58,14 @@ func NewColumn(name string) *Column {
 }
 
 //NewTask func
-func NewTask(name string, columnPtr *Column) *Task {
+func NewTask(name, descr string, pos float64, columnPtr *Column) *Task {
 
 	return &Task{
-		Name:       name,
-		Comments:   []*Comment{},
-		HostColumn: columnPtr,
+		Name:        name,
+		Description: descr,
+		Priority:    pos,
+		Comments:    []*Comment{},
+		HostColumn:  columnPtr,
 	}
 }
 
@@ -89,8 +85,9 @@ func (p *Project) AddColumn(name string) *Column {
 }
 
 // AddTask func
-func (c *Column) AddTask(name string) *Task {
-	newT := NewTask(name, c)
+func (c *Column) AddTask(name, descr string) *Task {
+
+	newT := NewTask(name, descr, float64(len(c.Tasks)), c)
 	c.Tasks = append(c.Tasks, newT)
 	return newT
 }
@@ -102,21 +99,46 @@ func (t *Task) AddComment(text string) *Comment {
 	return newCom
 }
 
-// ChangePriority swaps task with other task in column
-func (t *Task) ChangePriority(newPriority int) int {
-	taskCount := len(t.HostColumn.Tasks) // panic!
-	if newPriority < 0 {
-		newPriority = 0
-	} else if newPriority >= taskCount {
-		newPriority = taskCount - 1
+// ChangePosition swaps task with other task in column
+func (t *Task) ChangePosition(newPosition int) { // what if there is only one task?
+	allTasks := t.HostColumn.Tasks
+	taskCount := len(allTasks)
+	newPosition = getBoundIndex(newPosition, taskCount)
+	newPriorityFrom := allTasks[newPosition].Priority
+	var newPriorityTo float64
+
+	if newPosition == 0 {
+		newPriorityTo = newPriorityFrom - 1
+	} else if newPosition == taskCount-1 {
+		newPriorityTo = newPriorityFrom + 1
+	} else if newPriorityFrom > t.Priority {
+		newPriorityTo = t.HostColumn.Tasks[newPosition+1].Priority
+	} else if newPriorityFrom < t.Priority {
+		newPriorityTo = t.HostColumn.Tasks[newPosition-1].Priority
 	}
-	swapWith := t.HostColumn.Tasks[newPriority]
-	*swapWith, *t = *t, *swapWith // panic!
-	return newPriority
+	t.Priority = getBetweenPriority(newPriorityFrom, newPriorityTo)
+
+	sort.SliceStable(allTasks, func(i, j int) bool {
+		return allTasks[i].Priority < allTasks[j].Priority
+	})
+}
+
+func getBoundIndex(unboundIndex, len int) int {
+	if unboundIndex >= len-1 {
+		return len - 1
+	}
+	if unboundIndex < 0 {
+		return 0
+	}
+	return unboundIndex
+}
+
+func getBetweenPriority(priorityFrom, priorityTo float64) float64 {
+	return (priorityFrom + priorityTo) / 2
 }
 
 // PrintObj prints user's board contents
-func PrintObj(obj interface{}) {
+func printObj(obj interface{}) {
 	jsonBytes, err := json.MarshalIndent(obj, "", "  ")
 	if err != nil {
 		log.Fatalln(err)
@@ -125,13 +147,13 @@ func PrintObj(obj interface{}) {
 }
 
 func main() {
-	me := NewUser("Anton")
-	me.Projects[0].AddColumn("TO_DO").AddTask("gorello").AddComment("gambare!")
-	me.Projects[0].Columns[1].AddTask("NOT important task")
-	me.Projects[0].AddColumn("Done")
-	importantTask := me.Projects[0].Columns[1].AddTask("very important task")
-	PrintObj(me)
-	importantTask.ChangePriority(0)
-	PrintObj(me)
+	testProject := NewProject("golang", "")
+	testProject.AddColumn("TO_DO").AddTask("gorello", "").AddComment("gambare!")
+	testProject.Columns[1].AddTask("NOT important task", "")
+	testProject.AddColumn("Done")
+	importantTask := testProject.Columns[1].AddTask("very important task", "")
+	printObj(testProject)
+	importantTask.ChangePosition(0)
+	printObj(testProject)
 
 }

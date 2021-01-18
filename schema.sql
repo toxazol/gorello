@@ -24,7 +24,7 @@ CREATE TABLE tasks IF NOT EXISTS(
 id SERIAL PRIMARY KEY,
 name varchar(500) NOT NULL,
 description text(5000),
-priority int NOT NULL,
+priority double NOT NULL,
 column_id BIGINT UNSIGNED,
 CONSTRAINT column_id_fk FOREIGN KEY (column_id)
     REFERENCES columns(id)

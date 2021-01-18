@@ -99,10 +99,13 @@ func (t *Task) AddComment(text string) *Comment {
 	return newCom
 }
 
-// ChangePosition swaps task with other task in column
-func (t *Task) ChangePosition(newPosition int) { // what if there is only one task?
+// ChangePosition changes task position inside the column
+func (t *Task) ChangePosition(newPosition int) {
 	allTasks := t.HostColumn.Tasks
 	taskCount := len(allTasks)
+	if taskCount <= 1 {
+		return
+	}
 	newPosition = getBoundIndex(newPosition, taskCount)
 	newPriorityFrom := allTasks[newPosition].Priority
 	var newPriorityTo float64

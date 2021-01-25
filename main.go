@@ -1,42 +1,17 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"sort"
+	"time"
+
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/julienschmidt/httprouter"
 )
-
-//Project type
-type Project struct {
-	ID          int       `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Columns     []*Column `json:"columns"`
-}
-
-//Column type
-type Column struct {
-	ID    int     `json:"id"`
-	Name  string  `json:"name"`
-	Tasks []*Task `json:"tasks"`
-}
-
-//Task type
-type Task struct {
-	ID          int        `json:"id"`
-	Name        string     `json:"name"`
-	Description string     `json:"description"`
-	Priority    float64    `json:"-"`
-	Comments    []*Comment `json:"comments"`
-	HostColumn  *Column    `json:"-"`
-}
-
-//Comment type
-type Comment struct {
-	ID   int    `json:"id"`
-	Text string `json:"text"`
-}
 
 //NewProject func
 func NewProject(name, descr string) *Project {
@@ -149,14 +124,61 @@ func printObj(obj interface{}) {
 	fmt.Println(string(jsonBytes))
 }
 
+// ServerAddr defines the http host and port of the beer server
+const ServerAddr = "localhost:8080"
+
+var repo Storage
+var router *httprouter.Router
+
+// note: avoid using init
+func init() {
+	var err error
+
+	db, err := sql.Open("mysql", "gorello:password@/gorello")
+	if err != nil {
+		panic(err) //TO_DO: or log fatal?
+	}
+	// See "Important settings" section.
+	db.SetConnMaxLifetime(time.Minute * 3)
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(10)
+	// defer db.Close()
+
+	repo = NewStorage(db)
+
+	router = httprouter.New()
+	router.GET("/projects", GetProjects)
+	router.GET("/columns/:project_id", GetColumns)
+	router.GET("/column/:column_id", GetColumn)
+	router.GET("/tasks/:column_id", GetTasks)
+	router.GET("/task/:task_id", GetTask)
+	router.GET("/comments/:task_id", GetComments)
+	router.GET("/comment/:comment_id", GetComment)
+	// router.GET("/columns/:id", GetBeer)
+	// router.GET("/columns/:id/tasks", GetBeerReviews)
+
+	// router.POST("/columns", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	// 	decoder := json.NewDecoder(r.Body)
+	// 	var newCol Column
+	// 	_ = decoder.Decode(&newCol)
+	// 	//testProject.AddColumn()
+	// 	testProject.Columns = append(testProject.Columns, &newCol)
+	// 	printObjWeb(w, testProject)
+	// })
+	// router.POST("/columns/:id/tasks", AddBeerReview)
+}
+
 func main() {
+
 	testProject := NewProject("golang", "")
 	testProject.AddColumn("TO_DO").AddTask("gorello", "").AddComment("gambare!")
 	testProject.Columns[1].AddTask("NOT important task", "")
 	testProject.AddColumn("Done")
 	importantTask := testProject.Columns[1].AddTask("very important task", "")
-	printObj(testProject)
+	// printObj(testProject)
 	importantTask.ChangePosition(0)
-	printObj(testProject)
+	// printObj(testProject)
 
+	fmt.Println("The gorello server is on tap at http://localhost:8080.")
+	log.Fatal(http.ListenAndServe(ServerAddr, router))
 }

@@ -154,18 +154,17 @@ func init() {
 	router.GET("/task/:task_id", GetTask)
 	router.GET("/comments/:task_id", GetComments)
 	router.GET("/comment/:comment_id", GetComment)
-	// router.GET("/columns/:id", GetBeer)
-	// router.GET("/columns/:id/tasks", GetBeerReviews)
 
-	// router.POST("/columns", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	// 	decoder := json.NewDecoder(r.Body)
-	// 	var newCol Column
-	// 	_ = decoder.Decode(&newCol)
-	// 	//testProject.AddColumn()
-	// 	testProject.Columns = append(testProject.Columns, &newCol)
-	// 	printObjWeb(w, testProject)
-	// })
-	// router.POST("/columns/:id/tasks", AddBeerReview)
+	router.POST("/project", CreateProject)
+	router.POST("/column", CreateColumn)
+	router.POST("/task", CreateTask)
+	router.POST("/comment", CreateComment)
+
+	router.DELETE("/project/:project_id", DeleteProject)
+	router.DELETE("/column/:column_id", DeleteColumn)
+	router.DELETE("/task/:task_id", DeleteTask)
+	router.DELETE("/comment/:comment_id", DeleteComment)
+
 }
 
 func main() {

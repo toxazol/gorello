@@ -1,0 +1,45 @@
+version: "3.7"
+
+services:
+  db:
+    container_name: gorellodb
+    image: mysql
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    hostname: db
+    environment:
+      MYSQL_DATABASE: gorello
+      MYSQL_USER: gorello
+      MYSQL_ROOT_PASSWORD: password
+    ports:
+      - 3306:3306
+    networks:
+      - gorellonet
+
+    # volumes:
+    #   - ./db_schema:/docker-entrypoint-initdb.d
+
+  gorelloapi:
+    container_name: gorelloapi
+    # image: ivan-ochc/todoapi:v1
+    hostname: gorelloapi
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      GET_HOSTS_FROM: dns
+    networks:
+      - gorellonet
+    ports:
+      - 8080:8080
+    restart: on-failure
+    depends_on:
+      - db
+    links:
+      - db
+    labels:
+      kompose.service.type: LoadBalancer
+
+networks:
+  gorellonet:
+    driver: bridge

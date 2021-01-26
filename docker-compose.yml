@@ -15,7 +15,8 @@ services:
     networks:
       - gorellonet
     volumes:
-      - ./:/docker-entrypoint-initdb.d
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - ./db_data:/var/lib/mysql
 
   gorelloapi:
     container_name: gorelloapi

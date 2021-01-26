@@ -125,7 +125,7 @@ func printObj(obj interface{}) {
 }
 
 // ServerAddr defines the http host and port of the beer server
-const ServerAddr = "localhost:8080"
+const ServerAddr = "0.0.0.0:8080"
 
 var repo Storage
 var router *httprouter.Router
@@ -134,7 +134,7 @@ var router *httprouter.Router
 func init() {
 	var err error
 
-	db, err := sql.Open("mysql", "gorello:password@/gorello")
+	db, err := sql.Open("mysql", "root:password@tcp(mysql:3306)/gorello")
 	if err != nil {
 		panic(err) //TO_DO: or log fatal?
 	}
@@ -178,6 +178,6 @@ func main() {
 	importantTask.ChangePosition(0)
 	// printObj(testProject)
 
-	fmt.Println("The gorello server is on tap at http://localhost:8080.")
+	fmt.Println("The gorello server is on tap at " + ServerAddr)
 	log.Fatal(http.ListenAndServe(ServerAddr, router))
 }

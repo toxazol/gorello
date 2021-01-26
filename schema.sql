@@ -1,5 +1,5 @@
-CREATE DATABASE IF NOT EXISTS gorello;
-USE gorello;
+-- CREATE DATABASE IF NOT EXISTS gorello;
+-- USE gorello;
 
 
 CREATE TABLE IF NOT EXISTS projects(

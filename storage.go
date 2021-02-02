@@ -6,16 +6,18 @@ import (
 
 // Storage represents all possible actions available to deal with data
 type Storage interface {
+	ReadProject(projectID int) (Project, error)
 	ReadProjects() ([]Project, error)
 
-	ReadColumns(projectID int) ([]Column, error)
 	ReadColumn(columnID int) (Column, error)
+	ReadColumns(projectID int) ([]Column, error)
+	CheckColNameUniq(projectID int, name string) (bool, error)
 
-	ReadTasks(columnID int) ([]Task, error)
 	ReadTask(taskID int) (Task, error)
+	ReadTasks(columnID int) ([]Task, error)
 
-	ReadComments(taskID int) ([]Comment, error)
 	ReadComment(commentID int) (Comment, error)
+	ReadComments(taskID int) ([]Comment, error)
 
 	SaveProject(p Project) (Project, error) // TO_DO: divide into upd and create?
 	SaveColumn(c Column) (Column, error)
@@ -65,7 +67,7 @@ func (m *mysql) ReadProjects() ([]Project, error) {
 }
 
 func (m *mysql) ReadColumns(projectID int) ([]Column, error) {
-	q := `SELECT id, name FROM columns WHERE project_id = ?`
+	q := `SELECT id, name, priority, project_id FROM columns WHERE project_id = ? ORDER by priority`
 	rows, err := m.db.Query(q, projectID)
 	if err != nil {
 		return nil, err
@@ -75,16 +77,24 @@ func (m *mysql) ReadColumns(projectID int) ([]Column, error) {
 	columns := []Column{}
 	for rows.Next() {
 		var c Column
-		rows.Scan(&c.ID, &c.Name)
+		rows.Scan(&c.ID, &c.Name, &c.Priority, &c.ProjectID)
 		columns = append(columns, c)
 	}
 	return columns, nil
 }
 
 func (m *mysql) ReadColumn(columnID int) (Column, error) {
-	q := `SELECT id, name FROM columns WHERE id = ?`
+	q := `SELECT id, name, priority, project_id FROM columns WHERE id = ?`
 	var column Column
-	return column, m.db.QueryRow(q, columnID).Scan(&column.ID, &column.Name)
+	return column, m.db.QueryRow(q, columnID).Scan(
+		&column.ID, &column.Name, &column.Priority, &column.ProjectID)
+}
+
+func (m *mysql) CheckColNameUniq(projectID int, name string) (bool, error) {
+	q := `SELECT count(1) FROM columns WHERE project_id = ? AND name = ?`
+	var duplicateNamesCount int
+	err := m.db.QueryRow(q, projectID, name).Scan(&duplicateNamesCount)
+	return duplicateNamesCount == 0, err
 }
 
 func (m *mysql) ReadTasks(columnID int) ([]Task, error) {
@@ -110,7 +120,7 @@ func (m *mysql) ReadTask(taskID int) (Task, error) {
 }
 
 func (m *mysql) ReadComments(taskID int) ([]Comment, error) {
-	q := `SELECT id, text FROM comments WHERE task_id = ?`
+	q := `SELECT id, text, task_id, createTs FROM comments WHERE task_id = ? ORDER BY createTs desc`
 	rows, err := m.db.Query(q, taskID)
 	if err != nil {
 		return nil, err
@@ -120,15 +130,16 @@ func (m *mysql) ReadComments(taskID int) ([]Comment, error) {
 	comments := []Comment{}
 	for rows.Next() {
 		var c Comment
-		rows.Scan(&c.ID, &c.Text)
+		rows.Scan(&c.ID, &c.Text, &c.TaskID, &c.TimeStamp)
 		comments = append(comments, c)
 	}
 	return comments, nil
 }
 func (m *mysql) ReadComment(commentID int) (Comment, error) {
-	q := `SELECT id, text FROM comments WHERE id = ?`
+	q := `SELECT id, text, task_id, createTs FROM comments WHERE id = ?`
 	var comment Comment
-	return comment, m.db.QueryRow(q, commentID).Scan(&comment.ID, &comment.Text)
+	return comment, m.db.QueryRow(q, commentID).Scan(
+		&comment.ID, &comment.Text, &comment.TaskID, &comment.TimeStamp)
 }
 
 func (m *mysql) UpdateProject(p Project) (Project, error) {
@@ -164,11 +175,11 @@ func (m *mysql) SaveProject(p Project) (Project, error) {
 }
 
 func (m *mysql) UpdateColumn(c Column) (Column, error) {
-	q, err := m.db.Prepare(`UPDATE columns SET name = ?, project_id = ? WHERE id = ?`)
+	q, err := m.db.Prepare(`UPDATE columns SET name = ?, project_id = ?, priority = ? WHERE id = ?`)
 	if err != nil {
 		return c, err
 	}
-	_, err = q.Exec(c.Name, c.ProjectID, c.ID)
+	_, err = q.Exec(c.Name, c.ProjectID, c.Priority, c.ID)
 	if err != nil {
 		return c, err
 	}
@@ -191,7 +202,10 @@ func (m *mysql) SaveColumn(c Column) (Column, error) {
 	if err != nil {
 		return c, err
 	}
-	return m.ReadColumn(int(lastID64))
+	c.ID = int(lastID64)
+	c.Priority = float64(c.ID)
+
+	return m.UpdateColumn(c)
 }
 func (m *mysql) UpdateTask(t Task) (Task, error) {
 	q, err := m.db.Prepare(

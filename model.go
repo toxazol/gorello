@@ -13,6 +13,7 @@ type Column struct {
 	ID        int     `json:"id"`
 	Name      string  `json:"name"`
 	ProjectID int     `json:"project_id"`
+	Priority  float64 `json:"priority"`
 	Tasks     []*Task `json:"tasks"`
 }
 
@@ -29,7 +30,8 @@ type Task struct {
 
 //Comment type
 type Comment struct {
-	ID     int    `json:"id"`
-	Text   string `json:"text"`
-	TaskID int    `json:"task_id"`
+	ID        int    `json:"id"`
+	Text      string `json:"text"`
+	TaskID    int    `json:"task_id"`
+	TimeStamp string `json:"time_stamp"`
 }

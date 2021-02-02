@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"sort"
 	"time"
 
@@ -14,7 +15,7 @@ import (
 )
 
 //NewProject func
-func NewProject(name, descr string) *Project {
+func NewProject(name, descr string) *Project { // TO_DO: get rid of these?
 
 	return &Project{
 		Name:        name,
@@ -134,7 +135,15 @@ var router *httprouter.Router
 func init() {
 	var err error
 
-	db, err := sql.Open("mysql", "root:password@tcp(mysql:3306)/gorello")
+	mysqlHost := os.Getenv("MYSQL_HOST")
+	mysqlPort := os.Getenv("MYSQL_PORT")
+	mysqlUser := os.Getenv("MYSQL_USER")
+	mysqlPwd := os.Getenv("MYSQL_PWD")
+	db, err := sql.Open("mysql", mysqlUser+":"+mysqlPwd+"@tcp("+
+		mysqlHost+":"+mysqlPort+")/gorello")
+	// db, err := sql.Open("mysql", "root:password@tcp(mysql:3306)/gorello")
+	// db, err := sql.Open("mysql", "gorello:password@/gorello")
+
 	if err != nil {
 		panic(err) //TO_DO: or log fatal?
 	}
@@ -159,6 +168,8 @@ func init() {
 	router.POST("/column", CreateColumn)
 	router.POST("/task", CreateTask)
 	router.POST("/comment", CreateComment)
+
+	router.PUT("/move/column/:column_id", MoveColumn) // ?new_pos=int
 
 	router.DELETE("/project/:project_id", DeleteProject)
 	router.DELETE("/column/:column_id", DeleteColumn)

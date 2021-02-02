@@ -12,7 +12,7 @@ description varchar(1000)
 CREATE TABLE IF NOT EXISTS columns(
 id SERIAL PRIMARY KEY,
 name varchar(255) NOT NULL,
-priority double NOT NULL, -- index!
+priority double, -- index!
 project_id BIGINT UNSIGNED,
 CONSTRAINT project_id_fk FOREIGN KEY (project_id)
     REFERENCES projects(id)
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS tasks(
 id SERIAL PRIMARY KEY,
 name varchar(500) NOT NULL,
 description text(5000),
-priority double NOT NULL,
+priority double,
 column_id BIGINT UNSIGNED,
 CONSTRAINT column_id_fk FOREIGN KEY (column_id)
     REFERENCES columns(id)

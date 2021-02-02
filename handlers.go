@@ -285,7 +285,27 @@ func getNewColPriority(columns []Column, curPriority float64, newPosition int) f
 		newPriorityTo = columns[newPosition-1].Priority
 	}
 	return getBetweenPriority(newPriorityFrom, newPriorityTo)
+}
 
+func getNewTaskPriority(columns []Task, curPriority float64, newPosition int) float64 {
+	colCount := len(columns)
+	if colCount <= 1 {
+		return curPriority
+	}
+	newPosition = getBoundIndex(newPosition, colCount)
+	newPriorityFrom := columns[newPosition].Priority
+	var newPriorityTo float64
+
+	if newPosition == 0 {
+		newPriorityTo = newPriorityFrom - 1
+	} else if newPosition == colCount-1 {
+		newPriorityTo = newPriorityFrom + 1
+	} else if newPriorityFrom > curPriority {
+		newPriorityTo = columns[newPosition+1].Priority
+	} else if newPriorityFrom < curPriority {
+		newPriorityTo = columns[newPosition-1].Priority
+	}
+	return getBetweenPriority(newPriorityFrom, newPriorityTo)
 }
 
 //MoveColumn func
@@ -316,6 +336,48 @@ func MoveColumn(resp http.ResponseWriter, r *http.Request, p httprouter.Params) 
 		log.Fatal(err)
 	}
 	resp.WriteHeader(http.StatusOK)
-	//log.Printf("columnID: %d, newPos: %s", columnID, newPos)
+}
 
+//MoveTask func
+func MoveTask(resp http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	taskID, err := strconv.Atoi(p.ByName("task_id"))
+	if err != nil {
+		http.Error(resp, fmt.Sprintf("%s is not a valid task ID, it must be a number",
+			p.ByName("task_id")), http.StatusBadRequest)
+		return
+	}
+	newPos, err := strconv.Atoi(r.URL.Query().Get("new_pos")) // TO_DO: validate!
+	if err != nil {
+		http.Error(resp, fmt.Sprintf("%s is not a valid position, it must be a number",
+			r.URL.Query().Get("new_pos")), http.StatusBadRequest)
+		return
+	}
+	task, err := repo.ReadTask(taskID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	tasks, err := repo.ReadTasks(task.ColumnID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	task.Priority = getNewTaskPriority(tasks, task.Priority, newPos)
+	_, err = repo.SaveTask(task) //TO_DO: it should be transaction
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp.WriteHeader(http.StatusOK)
+}
+
+func getBoundIndex(unboundIndex, len int) int {
+	if unboundIndex >= len-1 {
+		return len - 1
+	}
+	if unboundIndex < 0 {
+		return 0
+	}
+	return unboundIndex
+}
+
+func getBetweenPriority(priorityFrom, priorityTo float64) float64 {
+	return (priorityFrom + priorityTo) / 2
 }

@@ -98,7 +98,7 @@ func (m *mysql) CheckColNameUniq(projectID int, name string) (bool, error) {
 }
 
 func (m *mysql) ReadTasks(columnID int) ([]Task, error) {
-	q := `SELECT id, name, description FROM tasks WHERE column_id = ?`
+	q := `SELECT id, name, description, priority, column_id FROM tasks WHERE column_id = ? ORDER BY priority`
 	rows, err := m.db.Query(q, columnID)
 	if err != nil {
 		return nil, err
@@ -108,15 +108,16 @@ func (m *mysql) ReadTasks(columnID int) ([]Task, error) {
 	tasks := []Task{}
 	for rows.Next() {
 		var t Task
-		rows.Scan(&t.ID, &t.Name, &t.Description)
+		rows.Scan(&t.ID, &t.Name, &t.Description, &t.Priority, &t.ColumnID)
 		tasks = append(tasks, t)
 	}
 	return tasks, nil
 }
 func (m *mysql) ReadTask(taskID int) (Task, error) {
-	q := `SELECT id, name, description FROM tasks WHERE id = ?`
+	q := `SELECT id, name, description, priority, column_id FROM tasks WHERE id = ?`
 	var task Task
-	return task, m.db.QueryRow(q, taskID).Scan(&task.ID, &task.Name, &task.Description)
+	return task, m.db.QueryRow(q, taskID).Scan(
+		&task.ID, &task.Name, &task.Description, &task.Priority, &task.ColumnID)
 }
 
 func (m *mysql) ReadComments(taskID int) ([]Comment, error) {
@@ -213,7 +214,7 @@ func (m *mysql) UpdateTask(t Task) (Task, error) {
 	if err != nil {
 		return t, err
 	}
-	_, err = q.Exec(t.Name, t.Description, t.Priority, t.ColumnID)
+	_, err = q.Exec(t.Name, t.Description, t.Priority, t.ColumnID, t.ID)
 	if err != nil {
 		return t, err
 	}
@@ -223,11 +224,11 @@ func (m *mysql) SaveTask(t Task) (Task, error) {
 	if t.ID != 0 {
 		return m.UpdateTask(t)
 	}
-	q, err := m.db.Prepare(`INSERT INTO tasks (name, description, priority, column_id) VALUES (?,?,?,?)`)
+	q, err := m.db.Prepare(`INSERT INTO tasks (name, description, column_id) VALUES (?,?,?)`)
 	if err != nil {
 		return t, err
 	}
-	res, err := q.Exec(t.Name, t.Description, t.Priority, t.ColumnID)
+	res, err := q.Exec(t.Name, t.Description, t.ColumnID)
 
 	if err != nil {
 		return t, err
@@ -236,7 +237,10 @@ func (m *mysql) SaveTask(t Task) (Task, error) {
 	if err != nil {
 		return t, err
 	}
-	return m.ReadTask(int(lastID64))
+	t.ID = int(lastID64)
+	t.Priority = float64(t.ID)
+
+	return m.UpdateTask(t)
 }
 func (m *mysql) UpdateComment(c Comment) (Comment, error) {
 	q, err := m.db.Prepare(

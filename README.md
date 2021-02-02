@@ -4,6 +4,7 @@
 docker-compose up
 ```
 
+[Postman collection with sample api requests](https://www.getpostman.com/collections/7c78b020381fe8d0116a)
 
 ## User is able to manage (create, read, update, delete) Projects:
 

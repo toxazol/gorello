@@ -12,7 +12,7 @@ type Column struct {
 	ID        int     `json:"id"`
 	Name      string  `json:"name"`
 	ProjectID int     `json:"project_id"`
-	Priority  float64 `json:"priority"`
+	Priority  float64 `json:"-"`
 }
 
 //Task type
@@ -21,7 +21,7 @@ type Task struct {
 	Name        string  `json:"name"`
 	Description string  `json:"description"`
 	ColumnID    int     `json:"column_id"`
-	Priority    float64 `json:"priority"`
+	Priority    float64 `json:"-"`
 }
 
 //Comment type

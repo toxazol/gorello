@@ -229,6 +229,25 @@ func DeleteColumn(resp http.ResponseWriter, r *http.Request, p httprouter.Params
 		log.Fatal(err)
 	}
 	if len(columns) > 1 {
+		var colToDelIndex int
+		for i, c := range columns {
+			if c == colToDel {
+				colToDelIndex = i
+				break
+			}
+		}
+		if colToDelIndex > 0 { // move tasks to the column to the left
+			colToLeftID := columns[colToDelIndex-1].ID
+			tasksToMove, err := repo.ReadTasks(columnID)
+			if err != nil {
+				log.Fatal(err)
+			}
+			for _, t := range tasksToMove {
+				t.ColumnID = colToLeftID
+				repo.SaveTask(t)
+			}
+		}
+
 		err = repo.RemoveColumn(columnID)
 		if err != nil {
 			log.Fatal(err)

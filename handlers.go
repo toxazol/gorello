@@ -149,14 +149,17 @@ func CreateColumn(resp http.ResponseWriter, r *http.Request, _ httprouter.Params
 		log.Fatal("CreateColumn decode error: ", err)
 	}
 	// TO_DO: add independent verifier
-	isUniq, err := repo.CheckColNameUniq(newColumn.ProjectID, newColumn.Name)
-	if err != nil {
-		log.Fatal(err) //TO_DO: rethink fatality
+	if len(newColumn.Name) > 0 {
+		isUniq, err := repo.CheckColNameUniq(newColumn.ProjectID, newColumn.Name)
+		if err != nil {
+			log.Fatal(err) //TO_DO: rethink fatality
+		}
+		if !isUniq {
+			http.Error(resp, "duplicate column name", http.StatusNotAcceptable)
+			return
+		}
 	}
-	if !isUniq {
-		http.Error(resp, "duplicate column name", http.StatusNotAcceptable)
-		return
-	}
+
 	savedColumn, err := repo.SaveColumn(newColumn)
 	if err != nil {
 		log.Fatal(err)
